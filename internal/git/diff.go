@@ -3,6 +3,7 @@ package git
 import (
 	"fmt"
 	"os/exec"
+	"strings"
 )
 
 type DiffOptions struct {
@@ -13,27 +14,35 @@ type DiffOptions struct {
 	Filters     []string
 }
 
-func DiffStaged(diffOptions DiffOptions) ([]byte, error) {
+type DiffResult struct {
+	Out         []byte
+	FullCommand string
+}
+
+func DiffStaged(diffOptions DiffOptions) (DiffResult, error) {
 	args := buildGenericArgs([]string{"diff", "--cached"}, diffOptions)
 	return runCli(diffOptions.CliPath, diffOptions.CliWd, args...)
 }
 
-func DiffRefs(refFrom string, refTo string, diffOptions DiffOptions) ([]byte, error) {
+func DiffRefs(refFrom string, refTo string, diffOptions DiffOptions) (DiffResult, error) {
 	args := buildGenericArgs([]string{"diff", refFrom, refTo}, diffOptions)
 	return runCli(diffOptions.CliPath, diffOptions.CliWd, args...)
 }
 
-func DiffCommit(ref string, diffOptions DiffOptions) ([]byte, error) {
+func DiffCommit(ref string, diffOptions DiffOptions) (DiffResult, error) {
 	args := buildGenericArgs([]string{"show", ref}, diffOptions)
 	return runCli(diffOptions.CliPath, diffOptions.CliWd, args...)
 }
 
-func runCli(cliPath string, dirName string, args ...string) ([]byte, error) {
-	fmt.Println(cliPath, args)
+func runCli(cliPath string, dirName string, args ...string) (DiffResult, error) {
 	cmd := exec.Command(cliPath, args...)
 	cmd.Dir = dirName
+	out, err := cmd.CombinedOutput()
 
-	return cmd.CombinedOutput()
+	return DiffResult{
+		Out:         out,
+		FullCommand: strings.Join(cmd.Args, " "),
+	}, err
 }
 
 func buildGenericArgs(base []string, options DiffOptions) []string {
@@ -45,11 +54,9 @@ func buildGenericArgs(base []string, options DiffOptions) []string {
 		args = append(args, "--find-renames")
 	}
 
-	if options.Filters != nil && len(options.Filters) > 0 {
+	if len(options.Filters) > 0 {
 		args = append(args, "--")
-		for _, filter := range options.Filters {
-			args = append(args, filter)
-		}
+		args = append(args, options.Filters...)
 	}
 
 	return args
