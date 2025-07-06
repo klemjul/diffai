@@ -32,7 +32,9 @@ const (
 var (
 	userStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("86"))
 	botStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("39"))
-	titleStyle = lipgloss.NewStyle().Bold(true)
+	titleStyle = lipgloss.NewStyle().
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderBottom(true)
 	inputStyle = lipgloss.NewStyle().
 			BorderStyle(lipgloss.NormalBorder()).
 			BorderTop(true)
@@ -72,8 +74,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-
-		m.viewport = viewport.New(msg.Width, msg.Height-3)
+		titleLines := (len(m.title) / msg.Width) + 1
+		m.viewport = viewport.New(msg.Width, msg.Height-(3+titleLines))
 		m.updateViewport()
 
 	case tea.MouseMsg:
@@ -133,11 +135,11 @@ func (m *model) updateViewport() {
 			out, _ := format.FormatMarkdown(msg.Content)
 			displayedMessages[i] = botStyle.Render(strings.TrimSpace(out))
 		case llm.User:
-			displayedMessages[i] = userStyle.Render(fmt.Sprintf("You: %s", msg.Content))
+			displayedMessages[i] = userStyle.Render(fmt.Sprintf("> %s", msg.Content))
 		}
 	}
 
-	content := strings.Join(displayedMessages, "\n")
+	content := strings.Join(displayedMessages, "\n\n")
 	m.viewport.SetContent(content)
 	m.viewport.GotoBottom()
 }

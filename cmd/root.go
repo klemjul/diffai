@@ -189,7 +189,7 @@ func run(cmd *cobra.Command, args []string) {
 
 	} else {
 		chatModel := ui.InitialModel(ui.InitialModelOptions{
-			Title:    fmt.Sprintf("💻 Reviewing %s with %s model from %s provider", diffRes.FullCommand, model, provider),
+			Title:    diffRes.FullCommand,
 			Messages: initialMessages,
 			GetBotResponse: func(messages []llm.Message) tea.Cmd {
 				return func() tea.Msg {
