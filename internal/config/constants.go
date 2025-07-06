@@ -1,8 +1,16 @@
 package config
 
+import "fmt"
+
 const (
-	DEFAULT_TOKEN_LIMIT  = 200000
-	DEFAULT_STREAM       = true
-	DEFAULT_INSTRUCTIONS = ""
-	ENV_PREFIX           = "DIFFAI"
+	DEFAULT_DIFF_TOKEN_LIMIT = 100_000
+	ENV_PREFIX               = "DIFFAI"
+	ENV_DIFF_TOKEN_LIMIT     = "DIFF_TOKEN_LIMIT"
+	ENV_MODEL                = "MODEL"
+	ENV_PROVIDER             = "PROVIDER"
+	ENV_PROMPT               = "PROMPT"
 )
+
+func GetEnvWithPrefix(env string) string {
+	return fmt.Sprintf("%s_%s", ENV_PREFIX, env)
+}

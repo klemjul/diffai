@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -36,7 +37,11 @@ diffai   # Review diff of staged changes
 
 		model := viper.GetString("MODEL")
 		if model == "" {
-			return fmt.Errorf("model must be specified '%s'", provider)
+			return fmt.Errorf("model must be specified '%s'", model)
+		}
+		prompt := viper.GetString("PROMPT")
+		if prompt == "" {
+			return fmt.Errorf("prompt must be specified '%s'", prompt)
 		}
 
 		return nil
@@ -44,17 +49,26 @@ diffai   # Review diff of staged changes
 }
 
 func Execute() error {
-	rootCmd.Flags().Int("token-limit", config.DEFAULT_TOKEN_LIMIT, "Maximum number of tokens to include in LLM requests")
-	rootCmd.Flags().String("instructions", config.DEFAULT_INSTRUCTIONS, "Include review instructions in the LLM prompt")
-	rootCmd.Flags().String("provider", "", "LLM provider to use (e.g., openai, ollama, etc.)")
-	rootCmd.Flags().String("model", "", "LLM model to use depend on the provider")
-	rootCmd.Flags().Bool("chat", false, "Run diffai in Chat Mode")
+	rootCmd.Flags().SortFlags = false
 
-	viper.BindPFlag("TOKEN_LIMIT", rootCmd.Flags().Lookup("token-limit"))
-	viper.BindPFlag("INSTRUCTIONS", rootCmd.Flags().Lookup("instructions"))
-	viper.BindPFlag("PROVIDER", rootCmd.Flags().Lookup("provider"))
-	viper.BindPFlag("MODEL", rootCmd.Flags().Lookup("model"))
-	viper.BindPFlag("CHAT", rootCmd.Flags().Lookup("chat"))
+	rootCmd.Flags().StringP("prompt", "p", "",
+		fmt.Sprintf(
+			`Includes review instructions as system prompt. (env: %s)
+- If <value> is a string, it will override the default and be used directly as the instructions.
+- If <value> is a number, it will look for the environment variable %s_<number> instead.
+`, config.GetEnvWithPrefix(config.ENV_PROMPT), config.GetEnvWithPrefix(config.ENV_PROMPT)))
+	rootCmd.Flags().String("provider", "",
+		fmt.Sprintf("LLM provider to use. (env: %s)", config.GetEnvWithPrefix(config.ENV_PROVIDER)))
+	rootCmd.Flags().String("model", "",
+		fmt.Sprintf("LLM model to use, depend on the provider. (env: %s)", config.GetEnvWithPrefix(config.ENV_MODEL)))
+	rootCmd.Flags().Int("diff-token-limit", config.DEFAULT_DIFF_TOKEN_LIMIT,
+		fmt.Sprintf("Maximum number of tokens for the diff content. (env: %s)", config.GetEnvWithPrefix(config.ENV_DIFF_TOKEN_LIMIT)))
+	rootCmd.Flags().BoolP("interactive", "i", false, "Run diffai in Chat Mode.")
+
+	viper.BindPFlag(config.ENV_DIFF_TOKEN_LIMIT, rootCmd.Flags().Lookup("diff-token-limit"))
+	viper.BindPFlag(config.ENV_PROMPT, rootCmd.Flags().Lookup("prompt"))
+	viper.BindPFlag(config.ENV_PROVIDER, rootCmd.Flags().Lookup("provider"))
+	viper.BindPFlag(config.ENV_MODEL, rootCmd.Flags().Lookup("model"))
 
 	viper.SetEnvPrefix(config.ENV_PREFIX)
 	viper.AutomaticEnv()
@@ -63,8 +77,27 @@ func Execute() error {
 }
 
 func run(cmd *cobra.Command, args []string) {
+	diffTokenLimit := viper.GetInt(config.ENV_DIFF_TOKEN_LIMIT)
+	model := viper.GetString(config.ENV_MODEL)
+	provider := viper.GetString(config.ENV_PROVIDER)
+	prompt := viper.GetString(config.ENV_PROMPT)
+	promptNo, err := strconv.Atoi(prompt)
+	if err == nil {
+		promptEnv := fmt.Sprintf("%s_%v", config.ENV_PROMPT, promptNo)
+		prompt = viper.GetString(promptEnv)
+		if prompt == "" {
+			cmd.PrintErrf("invalid instructions no, env variable not found %s\n", promptEnv)
+			os.Exit(1)
+			return
+		}
+	}
+
+	interactive, err := cmd.Flags().GetBool("interactive")
+	if err != nil {
+		interactive = false
+	}
+
 	var diffRes git.DiffResult
-	var err error
 	workingDirectory, err := os.Getwd()
 	if err != nil {
 		cmd.PrintErrf("Error getting current working directory: %v\n", err)
@@ -98,14 +131,9 @@ func run(cmd *cobra.Command, args []string) {
 	}
 
 	diffContent := string(diffRes.Out)
-	tokenLimit := viper.GetInt("TOKEN_LIMIT")
-	model := viper.GetString("MODEL")
-	provider := viper.GetString("PROVIDER")
-	instructions := viper.GetString("INSTRUCTIONS")
-	chat := viper.GetBool("CHAT")
 
-	if llm.RoughEstimateCodeTokens(diffContent) > tokenLimit {
-		cmd.PrintErrf("Diff exceeds estimated token limit of %d tokens. Please reduce the diff size or extend token limit.\n", tokenLimit)
+	if llm.RoughEstimateCodeTokens(diffContent) > diffTokenLimit {
+		cmd.PrintErrf("Diff exceeds estimated token limit of %d tokens. Please reduce the diff size or extend token limit.\n", diffTokenLimit)
 		os.Exit(1)
 		return
 	}
@@ -125,11 +153,11 @@ func run(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	if !chat {
+	if !interactive {
 		aiRes, err := client.Send(context.TODO(), []llm.Message{
 			{
 				Role:    llm.System,
-				Content: instructions,
+				Content: prompt,
 			},
 			{
 				Role:    llm.System,
@@ -137,53 +165,52 @@ func run(cmd *cobra.Command, args []string) {
 			},
 		})
 		if err != nil {
-			cmd.PrintErrf("Error generating review: %v\n", err)
+			cmd.PrintErrf("Failed to generate response: %v\n", err)
 			os.Exit(1)
 			return
 		}
-		formatRes, err := format.FormatMarkdown(aiRes.Content)
+		formattedRes, err := format.FormatMarkdown(aiRes.Content)
 		if err != nil {
-			cmd.PrintErrf("Error generating review: %v\n", err)
+			cmd.PrintErrf("Failed to format response: %v\n", err)
 			os.Exit(1)
 			return
 		}
+		fmt.Println(formattedRes)
 
-		fmt.Println(formatRes)
-		return
-	}
-
-	chatModel := ui.InitialModel(ui.InitialModelOptions{
-		Title: fmt.Sprintf("💻 Reviewing %s with %s model from %s provider", diffRes.FullCommand, model, provider),
-		Messages: []llm.Message{
-			{
-				Role:    llm.System,
-				Content: instructions,
+	} else {
+		chatModel := ui.InitialModel(ui.InitialModelOptions{
+			Title: fmt.Sprintf("💻 Reviewing %s with %s model from %s provider", diffRes.FullCommand, model, provider),
+			Messages: []llm.Message{
+				{
+					Role:    llm.System,
+					Content: prompt,
+				},
+				{
+					Role:    llm.System,
+					Content: diffContent,
+				},
 			},
-			{
-				Role:    llm.System,
-				Content: diffContent,
-			},
-		},
-		GetBotResponse: func(messages []llm.Message) tea.Cmd {
-			return func() tea.Msg {
-				aiRes, err := client.Send(context.TODO(), messages)
+			GetBotResponse: func(messages []llm.Message) tea.Cmd {
+				return func() tea.Msg {
+					aiRes, err := client.Send(context.TODO(), messages)
 
-				if err != nil {
+					if err != nil {
+						return llm.Message{
+							Role:    llm.Assistant,
+							Content: fmt.Sprintf("Failed to generate response: %v", err.Error()),
+						}
+					}
+
 					return llm.Message{
 						Role:    llm.Assistant,
-						Content: "Failed to generate response: " + err.Error(),
+						Content: aiRes.Content,
 					}
 				}
-
-				return llm.Message{
-					Role:    llm.Assistant,
-					Content: aiRes.Content,
-				}
-			}
-		}})
-	if _, err := tea.NewProgram(chatModel).Run(); err != nil {
-		cmd.PrintErrf("Error running chat: %v\n", err)
-		os.Exit(1)
-		return
+			}})
+		if _, err := tea.NewProgram(chatModel).Run(); err != nil {
+			cmd.PrintErrf("Error running interactive mode: %v\n", err)
+			os.Exit(1)
+			return
+		}
 	}
 }
