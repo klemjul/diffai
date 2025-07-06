@@ -20,7 +20,7 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:   "diffai <commit1> [commit2]",
-	Short: "Review git reference(s) with AI",
+	Short: "Ask questions about git changes using AI in the command line.",
 	Args:  cobra.RangeArgs(0, 2),
 	Example: `
 diffai main dev   # Review diff of two branches
@@ -60,7 +60,7 @@ func Execute() error {
 	rootCmd.Flags().String("provider", "",
 		fmt.Sprintf("LLM provider to use. (env: %s)", config.GetEnvWithPrefix(config.ENV_PROVIDER)))
 	rootCmd.Flags().String("model", "",
-		fmt.Sprintf("LLM model to use, depend on the provider. (env: %s)", config.GetEnvWithPrefix(config.ENV_MODEL)))
+		fmt.Sprintf("LLM model to use, depends on the provider. (env: %s)", config.GetEnvWithPrefix(config.ENV_MODEL)))
 	rootCmd.Flags().BoolP("interactive", "i", false, "Run diffai in Chat Mode.")
 	rootCmd.Flags().Int("diff-token-limit", config.DEFAULT_DIFF_TOKEN_LIMIT,
 		fmt.Sprintf("Maximum number of tokens for the diff content. (env: %s)", config.GetEnvWithPrefix(config.ENV_DIFF_TOKEN_LIMIT)))
