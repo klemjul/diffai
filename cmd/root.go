@@ -61,9 +61,10 @@ func Execute() error {
 		fmt.Sprintf("LLM provider to use. (env: %s)", config.GetEnvWithPrefix(config.ENV_PROVIDER)))
 	rootCmd.Flags().String("model", "",
 		fmt.Sprintf("LLM model to use, depend on the provider. (env: %s)", config.GetEnvWithPrefix(config.ENV_MODEL)))
+	rootCmd.Flags().BoolP("interactive", "i", false, "Run diffai in Chat Mode.")
 	rootCmd.Flags().Int("diff-token-limit", config.DEFAULT_DIFF_TOKEN_LIMIT,
 		fmt.Sprintf("Maximum number of tokens for the diff content. (env: %s)", config.GetEnvWithPrefix(config.ENV_DIFF_TOKEN_LIMIT)))
-	rootCmd.Flags().BoolP("interactive", "i", false, "Run diffai in Chat Mode.")
+	rootCmd.Flags().StringSliceP("diff-filters", "f", []string{}, "git diff -- <path> filters, used to limit the diff to the named paths or file exts")
 
 	viper.BindPFlag(config.ENV_DIFF_TOKEN_LIMIT, rootCmd.Flags().Lookup("diff-token-limit"))
 	viper.BindPFlag(config.ENV_PROMPT, rootCmd.Flags().Lookup("prompt"))
@@ -97,6 +98,11 @@ func run(cmd *cobra.Command, args []string) {
 		interactive = false
 	}
 
+	diffFilters, err := cmd.Flags().GetStringSlice("diff-filters")
+	if err != nil {
+		diffFilters = []string{}
+	}
+
 	var diffRes git.DiffResult
 	workingDirectory, err := os.Getwd()
 	if err != nil {
@@ -110,7 +116,7 @@ func run(cmd *cobra.Command, args []string) {
 		CliWd:       workingDirectory,
 		Unified:     3,
 		FindRenames: true,
-		Filters:     []string{},
+		Filters:     diffFilters,
 	}
 
 	switch len(args) {
@@ -153,17 +159,21 @@ func run(cmd *cobra.Command, args []string) {
 		return
 	}
 
+	initialMessages := []llm.Message{
+		{
+			Role:    llm.System,
+			Content: prompt,
+			Hidden:  true,
+		},
+		{
+			Role:    llm.User,
+			Content: diffContent,
+			Hidden:  true,
+		},
+	}
+
 	if !interactive {
-		aiRes, err := client.Send(context.TODO(), []llm.Message{
-			{
-				Role:    llm.System,
-				Content: prompt,
-			},
-			{
-				Role:    llm.System,
-				Content: diffContent,
-			},
-		})
+		aiRes, err := client.Send(context.TODO(), initialMessages)
 		if err != nil {
 			cmd.PrintErrf("Failed to generate response: %v\n", err)
 			os.Exit(1)
@@ -179,17 +189,8 @@ func run(cmd *cobra.Command, args []string) {
 
 	} else {
 		chatModel := ui.InitialModel(ui.InitialModelOptions{
-			Title: fmt.Sprintf("💻 Reviewing %s with %s model from %s provider", diffRes.FullCommand, model, provider),
-			Messages: []llm.Message{
-				{
-					Role:    llm.System,
-					Content: prompt,
-				},
-				{
-					Role:    llm.System,
-					Content: diffContent,
-				},
-			},
+			Title:    fmt.Sprintf("💻 Reviewing %s with %s model from %s provider", diffRes.FullCommand, model, provider),
+			Messages: initialMessages,
 			GetBotResponse: func(messages []llm.Message) tea.Cmd {
 				return func() tea.Msg {
 					aiRes, err := client.Send(context.TODO(), messages)

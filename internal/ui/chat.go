@@ -125,6 +125,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *model) updateViewport() {
 	displayedMessages := make([]string, len(m.messages))
 	for i, msg := range m.messages {
+		if msg.Hidden {
+			continue
+		}
 		switch msg.Role {
 		case llm.Assistant:
 			out, _ := format.FormatMarkdown(msg.Content)

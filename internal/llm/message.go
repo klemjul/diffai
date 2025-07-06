@@ -11,4 +11,5 @@ const (
 type Message struct {
 	Role    MessageRole
 	Content string
+	Hidden  bool
 }
