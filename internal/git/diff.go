@@ -2,8 +2,11 @@ package git
 
 import (
 	"fmt"
-	"os/exec"
 	"strings"
+)
+
+var (
+	execCommander = newExecCommander
 )
 
 type DiffOptions struct {
@@ -35,13 +38,13 @@ func DiffCommit(ref string, diffOptions DiffOptions) (DiffResult, error) {
 }
 
 func runCli(cliPath string, dirName string, args ...string) (DiffResult, error) {
-	cmd := exec.Command(cliPath, args...)
-	cmd.Dir = dirName
+	cmd := execCommander(cliPath, args...)
+	cmd.SetDir(dirName)
 	out, err := cmd.CombinedOutput()
 
 	return DiffResult{
 		Out:         out,
-		FullCommand: strings.Join(cmd.Args, " "),
+		FullCommand: strings.Join(cmd.GetArgs(), " "),
 	}, err
 }
 
