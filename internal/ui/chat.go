@@ -94,10 +94,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.updateViewport()
 
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c", "esc":
-			return m, tea.Quit
-		case "enter":
+		switch msg.Type {
+		case tea.KeyCtrlC, tea.KeyEsc:
+			cmd = tea.Quit
+		case tea.KeyEnter:
 			if m.textInput.Value() != "" && !m.waiting {
 				userMsg := llm.Message{
 					Role:    llm.User,
@@ -108,12 +108,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.textInput.SetValue("")
 				m.updateViewport()
 
-				return m, m.getBotResponse(m.messages)
+				cmd = m.getBotResponse(m.messages)
 			}
+
 		}
 	}
 
-	m.textInput, cmd = m.textInput.Update(msg)
+	m.textInput, _ = m.textInput.Update(msg)
 
 	if m.waiting {
 		m.textInput.Blur()
