@@ -4,7 +4,7 @@ import (
 	"os/exec"
 )
 
-type Command interface {
+type command interface {
 	CombinedOutput() ([]byte, error)
 	SetDir(string)
 	GetArgs() []string
@@ -22,7 +22,7 @@ func (exc execCommand) GetArgs() []string {
 	return exc.Args
 }
 
-func newExecCommander(name string, arg ...string) Command {
+func newExecCommander(name string, arg ...string) command {
 	execCmd := exec.Command(name, arg...)
 	return execCommand{Cmd: execCmd}
 }

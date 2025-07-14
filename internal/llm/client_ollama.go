@@ -17,9 +17,9 @@ type llmClientOllama struct {
 	client ollamaClient
 	model  string
 }
-type LlmClientOllama LLMClient
+type LLMClientOllama LLMClient
 
-func newOllamaClient(localEndpoint url.URL, model string) LlmClientOllama {
+func newOllamaClient(localEndpoint url.URL, model string) LLMClientOllama {
 	return &llmClientOllama{
 		client: api.NewClient(&localEndpoint, http.DefaultClient),
 		model:  model,

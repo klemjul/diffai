@@ -51,7 +51,7 @@ func newMockedExecCommander(options mockedExecCommanderOptions) (*mockCommand, f
 	mockCmd.On("GetArgs").Return(options.getArgsOut)
 
 	orig := execCommander
-	execCommander = func(name string, args ...string) Command {
+	execCommander = func(name string, args ...string) command {
 		if options.onExecCommander != nil {
 			options.onExecCommander(name, args...)
 		}
