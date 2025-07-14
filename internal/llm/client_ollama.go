@@ -9,15 +9,19 @@ import (
 	"github.com/ollama/ollama/api"
 )
 
+type ollamaClient interface {
+	Chat(ctx context.Context, req *api.ChatRequest, fn api.ChatResponseFunc) error
+}
+
 type llmClientOllama struct {
-	client api.Client
+	client ollamaClient
 	model  string
 }
 type LlmClientOllama LLMClient
 
 func newOllamaClient(localEndpoint url.URL, model string) LlmClientOllama {
 	return &llmClientOllama{
-		client: *api.NewClient(&localEndpoint, http.DefaultClient),
+		client: api.NewClient(&localEndpoint, http.DefaultClient),
 		model:  model,
 	}
 }
@@ -35,8 +39,6 @@ func (ai *llmClientOllama) Send(ctx context.Context, messages []Message) (*LLMSe
 			}, nil
 		case LLMStreamEventTypeError:
 			return nil, fmt.Errorf("ollama error: %s", event.Content)
-		default:
-			fullResult += event.Content
 		}
 	}
 	return &LLMSendResponse{
