@@ -110,10 +110,10 @@ func (m ChatTUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				cmd = m.getBotResponse(m.messages)
 			}
-		case tea.KeyRunes:
-			m.textInput, _ = m.textInput.Update(msg)
 		}
 	}
+
+	m.textInput, _ = m.textInput.Update(msg)
 
 	if m.waiting {
 		m.textInput.Blur()
