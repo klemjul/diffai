@@ -16,7 +16,42 @@ A lightweight command-line tool that provides a simple way to ask questions abou
 
 ## Installation
 
-> **TODO**
+1. Download the latest release
+
+You can manually download the binary from the [Releases](https://github.com/klemjul/diffai/releases/) page, or use the terminal:
+
+```bash
+# Set desired version and platform
+VERSION="0.1.0"         # replace with the version you want
+OS="linux"              # "darwin" for macOS
+ARCH="amd64"            # "arm64" or "i386" if needed
+
+# Download the binary archive
+TAR_NAME="diffai_${OS}_${ARCH}.tar.gz"
+curl -LO "https://github.com/klemjul/diffai/releases/download/v${VERSION}/${TAR_NAME}"
+```
+
+2. Verify the download
+
+```bash
+# Download the corresponding checksum file
+CHECKSUM_NAME="diffai_${VERSION}_checksums.txt"
+curl -LO "https://github.com/klemjul/diffai/releases/download/v${VERSION}/${CHECKSUM_NAME}"
+
+# Verify the integrity of the downloaded archive
+sha256sum --check --ignore-missing $CHECKSUM_NAME
+```
+
+3. Move binary
+
+```bash
+# Extract the archive
+tar -xzf "$TAR_NAME"
+
+# Make the binary executable and move it to your PATH
+chmod +x diffai
+sudo mv diffai /usr/local/bin/
+```
 
 ## Usage
 
