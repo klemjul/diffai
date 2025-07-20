@@ -5,19 +5,65 @@ import (
 
 	"github.com/openai/openai-go"
 	"github.com/openai/openai-go/option"
+	"github.com/openai/openai-go/packages/ssestream"
 )
 
-type llmClientOpenAi struct {
-	client openai.Client
-	model  string
-}
 type LLMClientOpenAI LLMClient
 
-func newOpenAIClient(openAIKey string, model string) LLMClientOpenAI {
+type llmClientOpenAi struct {
+	client openaiClient
+	model  string
+}
+
+type openaiClient interface {
+	New(ctx context.Context, body openai.ChatCompletionNewParams, opts ...option.RequestOption) (res *openai.ChatCompletion, err error)
+	NewStreaming(ctx context.Context, body openai.ChatCompletionNewParams, opts ...option.RequestOption) (stream openaiChatStream)
+}
+
+type openaiChatStream interface {
+	Next() bool
+	Current() openai.ChatCompletionChunk
+	Close() error
+	Err() error
+}
+
+type defaultOpenaiChatStream struct {
+	stream *ssestream.Stream[openai.ChatCompletionChunk]
+}
+
+func (s *defaultOpenaiChatStream) Next() bool {
+	return s.stream.Next()
+}
+
+func (s *defaultOpenaiChatStream) Current() openai.ChatCompletionChunk {
+	return s.stream.Current()
+}
+
+func (s *defaultOpenaiChatStream) Close() error {
+	return s.stream.Close()
+}
+
+func (s *defaultOpenaiChatStream) Err() error {
+	return s.stream.Err()
+}
+
+type defaultOpenAiClient struct {
+	client openai.Client
+}
+
+func (c *defaultOpenAiClient) New(ctx context.Context, body openai.ChatCompletionNewParams, opts ...option.RequestOption) (*openai.ChatCompletion, error) {
+	return c.client.Chat.Completions.New(ctx, body, opts...)
+}
+
+func (c *defaultOpenAiClient) NewStreaming(ctx context.Context, body openai.ChatCompletionNewParams, opts ...option.RequestOption) openaiChatStream {
+	return &defaultOpenaiChatStream{stream: c.client.Chat.Completions.NewStreaming(ctx, body, opts...)}
+}
+
+func newOpenAIClient(openAIKey string, model string, opts ...option.RequestOption) LLMClientOpenAI {
 	return &llmClientOpenAi{
-		client: openai.NewClient(
-			option.WithAPIKey(openAIKey),
-		),
+		client: &defaultOpenAiClient{client: openai.NewClient(
+			append([]option.RequestOption{option.WithAPIKey(openAIKey)}, opts...)...,
+		)},
 		model: model,
 	}
 }
@@ -40,7 +86,7 @@ func (ai *llmClientOpenAi) toOpenAiMessages(messages []Message) []openai.ChatCom
 }
 
 func (ai *llmClientOpenAi) Send(ctx context.Context, messages []Message) (*LLMSendResponse, error) {
-	res, err := ai.client.Chat.Completions.New(
+	res, err := ai.client.New(
 		ctx,
 		openai.ChatCompletionNewParams{
 			Model:    ai.model,
@@ -68,7 +114,7 @@ func (ai *llmClientOpenAi) Stream(ctx context.Context, messages []Message) <-cha
 	go func() {
 		defer close(out)
 		acc := openai.ChatCompletionAccumulator{}
-		aiStream := ai.client.Chat.Completions.NewStreaming(
+		aiStream := ai.client.NewStreaming(
 			ctx,
 			openai.ChatCompletionNewParams{
 				Model:    ai.model,
@@ -82,13 +128,13 @@ func (ai *llmClientOpenAi) Stream(ctx context.Context, messages []Message) <-cha
 
 		for aiStream.Next() {
 			chunk := aiStream.Current()
-			acc.AddChunk(chunk)
 			if len(chunk.Choices) > 0 && chunk.Choices[0].Delta.Content != "" {
+				acc.AddChunk(chunk)
 				out <- LLMStreamEvent{
 					Type:    LLMStreamEventTypeMessage,
 					Content: chunk.Choices[0].Delta.Content,
 					Usage: LLMTokenUsage{
-						InputTokens:  chunk.Usage.CompletionTokens,
+						InputTokens:  chunk.Usage.PromptTokens,
 						OutputTokens: chunk.Usage.CompletionTokens,
 					},
 				}

@@ -1,0 +1,48 @@
+name: Go CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Extract Go version from go.mod
+      id: go-version
+      run: |
+        # Extract version after 'go ' from go.mod
+        version=$(grep '^go ' go.mod | awk '{print $2}')
+        echo "Go version from go.mod is $version"
+        echo "go_version=$version" >> $GITHUB_OUTPUT
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ steps.go-version.outputs.go_version }}
+
+    - name: Check go.mod tidy
+      run: |
+        go mod tidy
+        git diff --exit-code go.mod go.sum
+
+    - name: install
+      run: go mod download
+
+    - name: fmt
+      run: |
+        if [ -n "$(go fmt ./...)" ]; then
+          echo "Go files are not properly formatted. Run 'go fmt ./...' and commit."
+          exit 1
+        fi
+
+    - name: ver
+      run: go vet ./...
+
+    - name: test
+      run: go test ./... -cover
