@@ -91,7 +91,5 @@ DiffAI is licensed under the MIT License. See the [LICENSE](./LICENSE) file for 
 ## Next Steps
 
 - [ ] Contributing doc
-- [ ] Release pipeline
-- [ ] Unit Tests
 - [ ] Additional LLM provider support
 - [ ] Custom output formats
