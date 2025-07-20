@@ -12,7 +12,7 @@ import (
 	"github.com/klemjul/diffai/internal/llm"
 )
 
-type model struct {
+type ChatTUIModel struct {
 	textInput textinput.Model
 	viewport  viewport.Model
 	messages  []llm.Message
@@ -46,12 +46,12 @@ type InitialModelOptions struct {
 	Messages       []llm.Message
 }
 
-func InitialModel(opts InitialModelOptions) model {
+func InitialModel(opts InitialModelOptions) ChatTUIModel {
 	ti := textinput.New()
 	ti.Placeholder = CHAT_INPUT_PLACEHOLDER
 	ti.Focus()
 
-	return model{
+	return ChatTUIModel{
 		textInput:      ti,
 		viewport:       viewport.New(0, 0),
 		title:          opts.Title,
@@ -61,7 +61,7 @@ func InitialModel(opts InitialModelOptions) model {
 	}
 }
 
-func (m model) Init() tea.Cmd {
+func (m ChatTUIModel) Init() tea.Cmd {
 	return tea.Batch(
 		textinput.Blink,
 		m.getBotResponse(m.messages),
@@ -69,7 +69,7 @@ func (m model) Init() tea.Cmd {
 	)
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m ChatTUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
@@ -110,11 +110,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				cmd = m.getBotResponse(m.messages)
 			}
-
+		case tea.KeyRunes:
+			m.textInput, _ = m.textInput.Update(msg)
 		}
 	}
-
-	m.textInput, _ = m.textInput.Update(msg)
 
 	if m.waiting {
 		m.textInput.Blur()
@@ -125,7 +124,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m *model) updateViewport() {
+func (m *ChatTUIModel) updateViewport() {
 	displayedMessages := make([]string, len(m.messages))
 	for i, msg := range m.messages {
 		if msg.Hidden {
@@ -145,7 +144,7 @@ func (m *model) updateViewport() {
 	m.viewport.GotoBottom()
 }
 
-func (m model) View() string {
+func (m ChatTUIModel) View() string {
 	input := m.textInput.View()
 
 	if m.waiting {

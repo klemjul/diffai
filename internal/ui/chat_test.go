@@ -103,7 +103,7 @@ func TestModelUpdate_WindowSizeMsg(t *testing.T) {
 
 			windowMsg := tea.WindowSizeMsg{Width: tc.screenW, Height: tc.screenH}
 			updatedModel, cmd := initModel.Update(windowMsg)
-			updated := updatedModel.(model)
+			updated := updatedModel.(ChatTUIModel)
 
 			assert.Equal(t, tc.expectedH, updated.viewport.Height)
 			assert.Equal(t, tc.expectedW, updated.viewport.Width)
@@ -148,11 +148,11 @@ func TestModelUpdate_MouseMsg(t *testing.T) {
 			initModel.viewport.SetYOffset(initYOffset)
 
 			updatedModel, cmd := initModel.Update(tc.msg)
-			updated := updatedModel.(model)
+			updated := updatedModel.(ChatTUIModel)
 
 			assert.Equal(t, updated.viewport.YOffset, tc.expectedYOffset)
 
-			assert.IsType(t, model{}, updatedModel)
+			assert.IsType(t, ChatTUIModel{}, updatedModel)
 			assert.Nil(t, cmd, "Mouse message should not return a command")
 		})
 	}
@@ -172,7 +172,7 @@ func TestModelUpdate_LLMMessage(t *testing.T) {
 	assert.True(t, initModel.waiting, "waiting should be false after receiving LLM message")
 
 	updatedModel, cmd := initModel.Update(llmMsg)
-	updated := updatedModel.(model)
+	updated := updatedModel.(ChatTUIModel)
 
 	assert.False(t, updated.waiting, "waiting should be false after receiving LLM message")
 	assert.Len(t, updated.messages, 1)
@@ -278,7 +278,7 @@ func TestModelUpdate_KeyMsg(t *testing.T) {
 				assert.Nil(t, cmd)
 			}
 
-			model := updatedModel.(model)
+			model := updatedModel.(ChatTUIModel)
 
 			assert.Equal(t, tc.expectedInputValue, model.textInput.Value())
 
@@ -299,13 +299,13 @@ func TestModelUpdate_TextInputFocusBlur(t *testing.T) {
 
 	initModel.waiting = false
 	updatedModel, _ := initModel.Update(tea.KeyMsg{})
-	updated := updatedModel.(model)
+	updated := updatedModel.(ChatTUIModel)
 
 	assert.True(t, updated.textInput.Focused(), "Text input should be focused when not waiting")
 
 	initModel.waiting = true
 	updatedModel, _ = initModel.Update(tea.KeyMsg{})
-	updated = updatedModel.(model)
+	updated = updatedModel.(ChatTUIModel)
 
 	assert.False(t, updated.textInput.Focused(), "Text input should be blurred when waiting")
 }

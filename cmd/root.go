@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/klemjul/diffai/internal/app"
 	"github.com/klemjul/diffai/internal/config"
-	"github.com/klemjul/diffai/internal/format"
 	"github.com/klemjul/diffai/internal/git"
 	"github.com/klemjul/diffai/internal/llm"
 	"github.com/klemjul/diffai/internal/ui"
@@ -18,37 +18,23 @@ import (
 	"github.com/spf13/viper"
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "diffai <commit1> [commit2]",
-	Short: "Ask questions about git changes using AI in the command line.",
-	Args:  cobra.RangeArgs(0, 2),
-	Example: `
+func RootCommand(app app.App) *cobra.Command {
+	rootCmd := &cobra.Command{
+		Use:   "diffai <commit1> [commit2]",
+		Short: "Ask questions about git changes using AI in the command line.",
+		Args:  cobra.RangeArgs(0, 2),
+		Example: `
 diffai main dev   # Review diff of two branches
 diffai abc123 def456   # Review diff of two commits
 diffai cdce10   # Review diff of a commit
 diffai   # Review diff of staged changes
 	`,
-	Run: run,
-	PreRunE: func(cmd *cobra.Command, args []string) error {
-		provider := viper.GetString("PROVIDER")
-		if !slices.Contains(llm.LLMProviders, llm.LLMProvider(provider)) {
-			return fmt.Errorf("invalid provider '%s'. Valid providers are: %v", provider, llm.LLMProviders)
-		}
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return run(cmd, args, app)
+		},
+		PreRunE: validate,
+	}
 
-		model := viper.GetString("MODEL")
-		if model == "" {
-			return fmt.Errorf("model must be specified '%s'", model)
-		}
-		prompt := viper.GetString("PROMPT")
-		if prompt == "" {
-			return fmt.Errorf("prompt must be specified '%s'", prompt)
-		}
-
-		return nil
-	},
-}
-
-func Execute() error {
 	rootCmd.Flags().SortFlags = false
 
 	rootCmd.Flags().StringP("prompt", "p", "",
@@ -74,10 +60,29 @@ func Execute() error {
 	viper.SetEnvPrefix(config.ENV_PREFIX)
 	viper.AutomaticEnv()
 
-	return rootCmd.Execute()
+	return rootCmd
 }
 
-func run(cmd *cobra.Command, args []string) {
+func validate(cmd *cobra.Command, args []string) error {
+	provider := viper.GetString("PROVIDER")
+	if !slices.Contains(llm.LLMProviders, llm.LLMProvider(provider)) {
+		return fmt.Errorf("invalid provider '%s'. Valid providers are: %v", provider, llm.LLMProviders)
+	}
+
+	model := viper.GetString("MODEL")
+	if model == "" {
+		return fmt.Errorf("model must be specified '%s'", model)
+	}
+	prompt := viper.GetString("PROMPT")
+	if prompt == "" {
+		return fmt.Errorf("prompt must be specified '%s'", prompt)
+	}
+
+	return nil
+}
+
+func run(cmd *cobra.Command, args []string, app app.App) error {
+
 	diffTokenLimit := viper.GetInt(config.ENV_DIFF_TOKEN_LIMIT)
 	model := viper.GetString(config.ENV_MODEL)
 	provider := viper.GetString(config.ENV_PROVIDER)
@@ -87,9 +92,7 @@ func run(cmd *cobra.Command, args []string) {
 		promptEnv := fmt.Sprintf("%s_%v", config.ENV_PROMPT, promptNo)
 		prompt = viper.GetString(promptEnv)
 		if prompt == "" {
-			cmd.PrintErrf("invalid instructions no, env variable not found %s\n", promptEnv)
-			os.Exit(1)
-			return
+			return fmt.Errorf("invalid instructions no, env variable not found %s", promptEnv)
 		}
 	}
 
@@ -102,13 +105,14 @@ func run(cmd *cobra.Command, args []string) {
 	if err != nil {
 		diffFilters = []string{}
 	}
+	if len(diffFilters) >= 1 && diffFilters[0] == "[]" {
+		diffFilters = diffFilters[1:]
+	}
 
 	var diffRes git.DiffResult
 	workingDirectory, err := os.Getwd()
 	if err != nil {
-		cmd.PrintErrf("Error getting current working directory: %v\n", err)
-		os.Exit(1)
-		return
+		return fmt.Errorf("error getting current working directory: %v", err)
 	}
 
 	options := git.DiffOptions{
@@ -122,41 +126,33 @@ func run(cmd *cobra.Command, args []string) {
 	switch len(args) {
 	case 2:
 		to, from := args[0], args[1]
-		diffRes, err = git.DiffRefs(to, from, options)
+		diffRes, err = app.Git().DiffRefs(to, from, options)
 	case 1:
 		ref := args[0]
-		diffRes, err = git.DiffCommit(ref, options)
+		diffRes, err = app.Git().DiffCommit(ref, options)
 	default:
-		diffRes, err = git.DiffStaged(options)
+		diffRes, err = app.Git().DiffStaged(options)
 	}
 
 	if err != nil {
-		cmd.PrintErrf("Error generating diff: %v\n", err)
-		os.Exit(1)
-		return
+		return fmt.Errorf("error generating diff: %v", err)
 	}
 
 	diffContent := string(diffRes.Out)
 
 	if llm.RoughEstimateCodeTokens(diffContent) > diffTokenLimit {
-		cmd.PrintErrf("Diff exceeds estimated token limit of %d tokens. Please reduce the diff size or extend token limit.\n", diffTokenLimit)
-		os.Exit(1)
-		return
+		return fmt.Errorf("diff exceeds estimated token limit of %d tokens. Please reduce the diff size or extend token limit", diffTokenLimit)
 	}
 
 	if strings.TrimSpace(diffContent) == "" {
-		cmd.PrintErrf("No diff content found. Please ensure you have staged changes or valid git references.\n")
-		os.Exit(1)
-		return
+		return fmt.Errorf("no diff content found. Please ensure you have staged changes or valid git references")
 	}
-	client, err := llm.NewClient(llm.LLMProvider(provider), llm.LLMClientOptions{
+	client, err := app.LLM().NewClient(llm.LLMProvider(provider), llm.LLMClientOptions{
 		Model: model,
 	})
 
 	if err != nil {
-		cmd.PrintErrf("Error creating LLM client: %v\n", err)
-		os.Exit(1)
-		return
+		return fmt.Errorf("failed to create LLM client: %v", err)
 	}
 
 	initialMessages := []llm.Message{
@@ -173,45 +169,45 @@ func run(cmd *cobra.Command, args []string) {
 	}
 
 	if !interactive {
-		aiRes, err := client.Send(context.TODO(), initialMessages)
+		aiRes, err := client.Send(cmd.Context(), initialMessages)
 		if err != nil {
-			cmd.PrintErrf("Failed to generate response: %v\n", err)
-			os.Exit(1)
-			return
+			return fmt.Errorf("failed to generate response: %v", err)
 		}
-		formattedRes, err := format.FormatMarkdown(aiRes.Content)
+		formattedRes, err := app.Format().FormatMarkdown(aiRes.Content)
 		if err != nil {
-			cmd.PrintErrf("Failed to format response: %v\n", err)
-			os.Exit(1)
-			return
+			return fmt.Errorf("failed to format response: %v", err)
 		}
-		fmt.Println(formattedRes)
+		cmd.OutOrStdout().Write([]byte(formattedRes))
 
 	} else {
-		chatModel := ui.InitialModel(ui.InitialModelOptions{
-			Title:    diffRes.FullCommand,
-			Messages: initialMessages,
-			GetBotResponse: func(messages []llm.Message) tea.Cmd {
-				return func() tea.Msg {
-					aiRes, err := client.Send(context.TODO(), messages)
+		TUIModel := app.TUI().InitialModel(ui.InitialModelOptions{
+			Title:          diffRes.FullCommand,
+			Messages:       initialMessages,
+			GetBotResponse: makeLLMBotResponder(client, cmd.Context()),
+		})
+		if _, err := app.TUI().Run(TUIModel); err != nil {
+			return fmt.Errorf("error running interactive mode: %v", err)
+		}
+	}
+	return nil
+}
 
-					if err != nil {
-						return llm.Message{
-							Role:    llm.Assistant,
-							Content: fmt.Sprintf("Failed to generate response: %v", err.Error()),
-						}
-					}
+func makeLLMBotResponder(client llm.LLMClient, ctx context.Context) func([]llm.Message) tea.Cmd {
+	return func(messages []llm.Message) tea.Cmd {
+		return func() tea.Msg {
+			aiRes, err := client.Send(ctx, messages)
 
-					return llm.Message{
-						Role:    llm.Assistant,
-						Content: aiRes.Content,
-					}
+			if err != nil {
+				return llm.Message{
+					Role:    llm.Assistant,
+					Content: fmt.Sprintf("Failed to generate response: %v", err.Error()),
 				}
-			}})
-		if _, err := tea.NewProgram(chatModel).Run(); err != nil {
-			cmd.PrintErrf("Error running interactive mode: %v\n", err)
-			os.Exit(1)
-			return
+			}
+
+			return llm.Message{
+				Role:    llm.Assistant,
+				Content: aiRes.Content,
+			}
 		}
 	}
 }
