@@ -6,6 +6,6 @@ import (
 )
 
 func main() {
-	app := app.NewDefaultApp()
-	cmd.RootCommand(app).Execute()
+	services := app.NewDefaultServiceProvider()
+	cmd.RootCommand(services).Execute()
 }

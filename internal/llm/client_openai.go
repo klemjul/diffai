@@ -8,7 +8,7 @@ import (
 	"github.com/openai/openai-go/packages/ssestream"
 )
 
-type llmClientOpenAi struct {
+type llmClientOpenAI struct {
 	client openaiClient
 	model  string
 }
@@ -45,50 +45,50 @@ func (s *defaultOpenaiChatStream) Err() error {
 	return s.stream.Err()
 }
 
-type defaultOpenAiClient struct {
+type defaultOpenAIClient struct {
 	client openai.Client
 }
 
-func (c *defaultOpenAiClient) New(ctx context.Context, body openai.ChatCompletionNewParams, opts ...option.RequestOption) (*openai.ChatCompletion, error) {
+func (c *defaultOpenAIClient) New(ctx context.Context, body openai.ChatCompletionNewParams, opts ...option.RequestOption) (*openai.ChatCompletion, error) {
 	return c.client.Chat.Completions.New(ctx, body, opts...)
 }
 
-func (c *defaultOpenAiClient) NewStreaming(ctx context.Context, body openai.ChatCompletionNewParams, opts ...option.RequestOption) openaiChatStream {
+func (c *defaultOpenAIClient) NewStreaming(ctx context.Context, body openai.ChatCompletionNewParams, opts ...option.RequestOption) openaiChatStream {
 	return &defaultOpenaiChatStream{stream: c.client.Chat.Completions.NewStreaming(ctx, body, opts...)}
 }
 
 func newOpenAIClient(openAIKey string, model string, opts ...option.RequestOption) LLMClient {
-	return &llmClientOpenAi{
-		client: &defaultOpenAiClient{client: openai.NewClient(
+	return &llmClientOpenAI{
+		client: &defaultOpenAIClient{client: openai.NewClient(
 			append([]option.RequestOption{option.WithAPIKey(openAIKey)}, opts...)...,
 		)},
 		model: model,
 	}
 }
 
-func (ai *llmClientOpenAi) toOpenAiMessages(messages []Message) []openai.ChatCompletionMessageParamUnion {
-	var openAiMessages []openai.ChatCompletionMessageParamUnion
+func (ai *llmClientOpenAI) toOpenAIMessages(messages []Message) []openai.ChatCompletionMessageParamUnion {
+	var openAIMessages []openai.ChatCompletionMessageParamUnion
 	for _, msg := range messages {
 		switch msg.Role {
 		case User:
-			openAiMessages = append(openAiMessages, openai.UserMessage(msg.Content))
+			openAIMessages = append(openAIMessages, openai.UserMessage(msg.Content))
 		case Assistant:
-			openAiMessages = append(openAiMessages, openai.AssistantMessage(msg.Content))
+			openAIMessages = append(openAIMessages, openai.AssistantMessage(msg.Content))
 		case System:
-			openAiMessages = append(openAiMessages, openai.SystemMessage(msg.Content))
+			openAIMessages = append(openAIMessages, openai.SystemMessage(msg.Content))
 		default:
-			openAiMessages = append(openAiMessages, openai.UserMessage(msg.Content))
+			openAIMessages = append(openAIMessages, openai.UserMessage(msg.Content))
 		}
 	}
-	return openAiMessages
+	return openAIMessages
 }
 
-func (ai *llmClientOpenAi) Send(ctx context.Context, messages []Message) (res *LLMSendResponse, err error) {
-	openAiRes, err := ai.client.New(
+func (ai *llmClientOpenAI) Send(ctx context.Context, messages []Message) (res *LLMSendResponse, err error) {
+	openAIRes, err := ai.client.New(
 		ctx,
 		openai.ChatCompletionNewParams{
 			Model:    ai.model,
-			Messages: ai.toOpenAiMessages(messages),
+			Messages: ai.toOpenAIMessages(messages),
 			N:        openai.Int(1),
 		},
 	)
@@ -98,15 +98,15 @@ func (ai *llmClientOpenAi) Send(ctx context.Context, messages []Message) (res *L
 	}
 
 	return &LLMSendResponse{
-		Content: openAiRes.Choices[0].Message.Content,
+		Content: openAIRes.Choices[0].Message.Content,
 		Usage: LLMTokenUsage{
-			InputTokens:  openAiRes.Usage.PromptTokens,
-			OutputTokens: openAiRes.Usage.CompletionTokens,
+			InputTokens:  openAIRes.Usage.PromptTokens,
+			OutputTokens: openAIRes.Usage.CompletionTokens,
 		},
 	}, nil
 }
 
-func (ai *llmClientOpenAi) Stream(ctx context.Context, messages []Message) <-chan LLMStreamEvent {
+func (ai *llmClientOpenAI) Stream(ctx context.Context, messages []Message) <-chan LLMStreamEvent {
 	out := make(chan LLMStreamEvent)
 
 	go func() {
@@ -116,7 +116,7 @@ func (ai *llmClientOpenAi) Stream(ctx context.Context, messages []Message) <-cha
 			ctx,
 			openai.ChatCompletionNewParams{
 				Model:    ai.model,
-				Messages: ai.toOpenAiMessages(messages),
+				Messages: ai.toOpenAIMessages(messages),
 				StreamOptions: openai.ChatCompletionStreamOptionsParam{
 					IncludeUsage: openai.Bool(true),
 				},

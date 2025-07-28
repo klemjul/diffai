@@ -27,7 +27,7 @@ type TextFormatService interface {
 	FormatMarkdown(text string) (string, error)
 }
 
-type App interface {
+type ServiceProvider interface {
 	Git() GitService
 	TUI() TUIService
 	LLM() LLMService
@@ -42,17 +42,17 @@ type DefaultLLMService struct{}
 
 type DefaultTextFormatService struct{}
 
-type DefaultApp struct {
+type DefaultServiceProvider struct {
 	git    GitService
 	tui    TUIService
 	llm    LLMService
 	format TextFormatService
 }
 
-func (a *DefaultApp) Git() GitService           { return a.git }
-func (a *DefaultApp) TUI() TUIService           { return a.tui }
-func (a *DefaultApp) LLM() LLMService           { return a.llm }
-func (a *DefaultApp) Format() TextFormatService { return a.format }
+func (a *DefaultServiceProvider) Git() GitService           { return a.git }
+func (a *DefaultServiceProvider) TUI() TUIService           { return a.tui }
+func (a *DefaultServiceProvider) LLM() LLMService           { return a.llm }
+func (a *DefaultServiceProvider) Format() TextFormatService { return a.format }
 
 func (g *DefaultGitService) DiffStaged(diffOptions git.DiffOptions) (git.DiffResult, error) {
 	return git.DiffStaged(diffOptions)
@@ -79,6 +79,6 @@ func (l *DefaultTextFormatService) FormatMarkdown(text string) (string, error) {
 	return format.FormatMarkdown(text)
 }
 
-func NewDefaultApp() App {
-	return &DefaultApp{git: &DefaultGitService{}, tui: &DefaultTUIService{}, llm: &DefaultLLMService{}, format: &DefaultTextFormatService{}}
+func NewDefaultServiceProvider() ServiceProvider {
+	return &DefaultServiceProvider{git: &DefaultGitService{}, tui: &DefaultTUIService{}, llm: &DefaultLLMService{}, format: &DefaultTextFormatService{}}
 }

@@ -23,10 +23,10 @@ type ChatTUIModel struct {
 }
 
 const (
-	CHAT_INPUT_PLACEHOLDER = "Type a message..."
-	CHAT_INIT_LOADING      = "Loading..."
-	CHAT_WAITING_RESPONSE  = "> ⏳ Waiting for response..."
-	CHAT_TYPING_INDICATOR  = "Bot: typing..."
+	chatInputPlaceholder = "Type a message..."
+	chatInitLoading      = "Loading..."
+	chatWaitingResponse  = "> ⏳ Waiting for response..."
+	chatTypingIndicator  = "Bot: typing..."
 )
 
 var (
@@ -48,7 +48,7 @@ type InitialModelOptions struct {
 
 func InitialModel(opts InitialModelOptions) ChatTUIModel {
 	ti := textinput.New()
-	ti.Placeholder = CHAT_INPUT_PLACEHOLDER
+	ti.Placeholder = chatInputPlaceholder
 	ti.Focus()
 
 	return ChatTUIModel{
@@ -147,7 +147,7 @@ func (m ChatTUIModel) View() string {
 	input := m.textInput.View()
 
 	if m.waiting {
-		input = CHAT_WAITING_RESPONSE
+		input = chatWaitingResponse
 	}
 
 	return lipgloss.JoinVertical(

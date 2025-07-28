@@ -10,7 +10,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/klemjul/diffai/internal/app"
-	"github.com/klemjul/diffai/internal/config"
 	"github.com/klemjul/diffai/internal/git"
 	"github.com/klemjul/diffai/internal/llm"
 	"github.com/klemjul/diffai/internal/ui"
@@ -18,7 +17,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func RootCommand(app app.App) *cobra.Command {
+func RootCommand(services app.ServiceProvider) *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:   "diffai <commit1> [commit2]",
 		Short: "Ask questions about git changes using AI in the command line.",
@@ -30,7 +29,7 @@ diffai cdce10   # Review diff of a commit
 diffai   # Review diff of staged changes
 	`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return run(cmd, args, app)
+			return run(cmd, args, services)
 		},
 		PreRunE: validate,
 	}
@@ -42,22 +41,29 @@ diffai   # Review diff of staged changes
 			`Includes review instructions as system prompt. (env: %s)
 - If <value> is a string, it will override the default and be used directly as the instructions.
 - If <value> is a number, it will look for the environment variable %s_<number> instead.
-`, config.GetEnvWithPrefix(config.ENV_PROMPT), config.GetEnvWithPrefix(config.ENV_PROMPT)))
+`, app.GetEnvWithPrefix(app.EnvPrompt), app.GetEnvWithPrefix(app.EnvPrompt)))
+
 	rootCmd.Flags().String("provider", "",
-		fmt.Sprintf("LLM provider to use. (env: %s)", config.GetEnvWithPrefix(config.ENV_PROVIDER)))
+		fmt.Sprintf("LLM provider to use. (env: %s)", app.GetEnvWithPrefix(app.EnvProvider)))
+
 	rootCmd.Flags().String("model", "",
-		fmt.Sprintf("LLM model to use, depends on the provider. (env: %s)", config.GetEnvWithPrefix(config.ENV_MODEL)))
-	rootCmd.Flags().BoolP("interactive", "i", false, "Run diffai in Chat Mode.")
-	rootCmd.Flags().Int("diff-token-limit", config.DEFAULT_DIFF_TOKEN_LIMIT,
-		fmt.Sprintf("Maximum number of tokens for the diff content. (env: %s)", config.GetEnvWithPrefix(config.ENV_DIFF_TOKEN_LIMIT)))
-	rootCmd.Flags().StringSliceP("diff-filters", "f", []string{}, "git diff -- <path> filters, used to limit the diff to the named paths or file exts")
+		fmt.Sprintf("LLM model to use, depends on the provider. (env: %s)", app.GetEnvWithPrefix(app.EnvModel)))
 
-	viper.BindPFlag(config.ENV_DIFF_TOKEN_LIMIT, rootCmd.Flags().Lookup("diff-token-limit"))
-	viper.BindPFlag(config.ENV_PROMPT, rootCmd.Flags().Lookup("prompt"))
-	viper.BindPFlag(config.ENV_PROVIDER, rootCmd.Flags().Lookup("provider"))
-	viper.BindPFlag(config.ENV_MODEL, rootCmd.Flags().Lookup("model"))
+	rootCmd.Flags().BoolP("interactive", "i", false,
+		"Run diffai in Chat Mode.")
 
-	viper.SetEnvPrefix(config.ENV_PREFIX)
+	rootCmd.Flags().Int("diff-token-limit", app.DefaultDiffTokenLimit,
+		fmt.Sprintf("Maximum number of tokens for the diff content. (env: %s)", app.GetEnvWithPrefix(app.EnvDiffTokenLimit)))
+
+	rootCmd.Flags().StringSliceP("diff-filters", "f", []string{},
+		"git diff -- <path> filters, used to limit the diff to the named paths or file exts")
+
+	viper.BindPFlag(app.EnvDiffTokenLimit, rootCmd.Flags().Lookup("diff-token-limit"))
+	viper.BindPFlag(app.EnvPrompt, rootCmd.Flags().Lookup("prompt"))
+	viper.BindPFlag(app.EnvProvider, rootCmd.Flags().Lookup("provider"))
+	viper.BindPFlag(app.EnvModel, rootCmd.Flags().Lookup("model"))
+
+	viper.SetEnvPrefix(app.AppKey)
 	viper.AutomaticEnv()
 
 	return rootCmd
@@ -81,15 +87,15 @@ func validate(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func run(cmd *cobra.Command, args []string, app app.App) error {
+func run(cmd *cobra.Command, args []string, services app.ServiceProvider) error {
 
-	diffTokenLimit := viper.GetInt(config.ENV_DIFF_TOKEN_LIMIT)
-	model := viper.GetString(config.ENV_MODEL)
-	provider := viper.GetString(config.ENV_PROVIDER)
-	prompt := viper.GetString(config.ENV_PROMPT)
+	diffTokenLimit := viper.GetInt(app.EnvDiffTokenLimit)
+	model := viper.GetString(app.EnvModel)
+	provider := viper.GetString(app.EnvProvider)
+	prompt := viper.GetString(app.EnvPrompt)
 	promptNo, err := strconv.Atoi(prompt)
 	if err == nil {
-		promptEnv := fmt.Sprintf("%s_%v", config.ENV_PROMPT, promptNo)
+		promptEnv := fmt.Sprintf("%s_%v", app.EnvPrompt, promptNo)
 		prompt = viper.GetString(promptEnv)
 		if prompt == "" {
 			return fmt.Errorf("invalid instructions no, env variable not found %s", promptEnv)
@@ -126,12 +132,12 @@ func run(cmd *cobra.Command, args []string, app app.App) error {
 	switch len(args) {
 	case 2:
 		to, from := args[0], args[1]
-		diffRes, err = app.Git().DiffRefs(to, from, options)
+		diffRes, err = services.Git().DiffRefs(to, from, options)
 	case 1:
 		ref := args[0]
-		diffRes, err = app.Git().DiffCommit(ref, options)
+		diffRes, err = services.Git().DiffCommit(ref, options)
 	default:
-		diffRes, err = app.Git().DiffStaged(options)
+		diffRes, err = services.Git().DiffStaged(options)
 	}
 
 	if err != nil {
@@ -147,7 +153,7 @@ func run(cmd *cobra.Command, args []string, app app.App) error {
 	if strings.TrimSpace(diffContent) == "" {
 		return fmt.Errorf("no diff content found. Please ensure you have staged changes or valid git references")
 	}
-	client, err := app.LLM().NewClient(llm.LLMProvider(provider), llm.LLMClientOptions{
+	client, err := services.LLM().NewClient(llm.LLMProvider(provider), llm.LLMClientOptions{
 		Model: model,
 	})
 
@@ -173,19 +179,19 @@ func run(cmd *cobra.Command, args []string, app app.App) error {
 		if err != nil {
 			return fmt.Errorf("failed to generate response: %v", err)
 		}
-		formattedRes, err := app.Format().FormatMarkdown(aiRes.Content)
+		formattedRes, err := services.Format().FormatMarkdown(aiRes.Content)
 		if err != nil {
 			return fmt.Errorf("failed to format response: %v", err)
 		}
 		cmd.OutOrStdout().Write([]byte(formattedRes))
 
 	} else {
-		TUIModel := app.TUI().InitialModel(ui.InitialModelOptions{
+		TUIModel := services.TUI().InitialModel(ui.InitialModelOptions{
 			Title:          diffRes.FullCommand,
 			Messages:       initialMessages,
 			GetBotResponse: makeLLMBotResponder(client, cmd.Context()),
 		})
-		if _, err := app.TUI().Run(TUIModel); err != nil {
+		if _, err := services.TUI().Run(TUIModel); err != nil {
 			return fmt.Errorf("error running interactive mode: %v", err)
 		}
 	}

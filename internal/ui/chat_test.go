@@ -50,7 +50,7 @@ func TestInitialModel(t *testing.T) {
 
 			assert.Equal(t, tt.opts.Title, m.title)
 			assert.Equal(t, true, m.waiting)
-			assert.Equal(t, CHAT_INPUT_PLACEHOLDER, m.textInput.Placeholder)
+			assert.Equal(t, chatInputPlaceholder, m.textInput.Placeholder)
 			assert.Equal(t, m.viewport.Height, 0)
 			assert.Equal(t, m.viewport.Width, 0)
 			assert.Len(t, m.messages, len(tt.opts.Messages))
@@ -365,7 +365,7 @@ func TestModelView_Waiting(t *testing.T) {
 
 	view := model.View()
 
-	assert.Contains(t, view, CHAT_WAITING_RESPONSE)
+	assert.Contains(t, view, chatWaitingResponse)
 	assert.Contains(t, view, t.Name())
 }
 
@@ -382,7 +382,7 @@ func TestModelView_InputShownWhenNotWaiting(t *testing.T) {
 
 	view := model.View()
 
-	assert.NotContains(t, view, CHAT_WAITING_RESPONSE)
+	assert.NotContains(t, view, chatWaitingResponse)
 	assert.Contains(t, view, "Hello")
 	assert.Contains(t, view, t.Name())
 }
