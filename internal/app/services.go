@@ -49,33 +49,33 @@ type DefaultServiceProvider struct {
 	format TextFormatService
 }
 
-func (a *DefaultServiceProvider) Git() GitService           { return a.git }
-func (a *DefaultServiceProvider) TUI() TUIService           { return a.tui }
-func (a *DefaultServiceProvider) LLM() LLMService           { return a.llm }
-func (a *DefaultServiceProvider) Format() TextFormatService { return a.format }
+func (p *DefaultServiceProvider) Git() GitService           { return p.git }
+func (p *DefaultServiceProvider) TUI() TUIService           { return p.tui }
+func (p *DefaultServiceProvider) LLM() LLMService           { return p.llm }
+func (p *DefaultServiceProvider) Format() TextFormatService { return p.format }
 
-func (g *DefaultGitService) DiffStaged(diffOptions git.DiffOptions) (git.DiffResult, error) {
+func (s *DefaultGitService) DiffStaged(diffOptions git.DiffOptions) (git.DiffResult, error) {
 	return git.DiffStaged(diffOptions)
 }
-func (g *DefaultGitService) DiffRefs(refFrom string, refTo string, diffOptions git.DiffOptions) (git.DiffResult, error) {
+func (s *DefaultGitService) DiffRefs(refFrom string, refTo string, diffOptions git.DiffOptions) (git.DiffResult, error) {
 	return git.DiffRefs(refFrom, refTo, diffOptions)
 }
-func (g *DefaultGitService) DiffCommit(ref string, diffOptions git.DiffOptions) (git.DiffResult, error) {
+func (s *DefaultGitService) DiffCommit(ref string, diffOptions git.DiffOptions) (git.DiffResult, error) {
 	return git.DiffCommit(ref, diffOptions)
 }
 
-func (c *DefaultTUIService) InitialModel(opts ui.InitialModelOptions) ui.ChatTUIModel {
+func (s *DefaultTUIService) InitialModel(opts ui.InitialModelOptions) ui.ChatTUIModel {
 	return ui.InitialModel(opts)
 }
-func (c *DefaultTUIService) Run(model ui.ChatTUIModel) (returnModel tea.Model, returnErr error) {
+func (s *DefaultTUIService) Run(model ui.ChatTUIModel) (returnModel tea.Model, returnErr error) {
 	return tea.NewProgram(model).Run()
 }
 
-func (l *DefaultLLMService) NewClient(provider llm.LLMProvider, opts llm.LLMClientOptions) (llm.LLMClient, error) {
+func (s *DefaultLLMService) NewClient(provider llm.LLMProvider, opts llm.LLMClientOptions) (llm.LLMClient, error) {
 	return llm.NewClient(provider, opts)
 }
 
-func (l *DefaultTextFormatService) FormatMarkdown(text string) (string, error) {
+func (s *DefaultTextFormatService) FormatMarkdown(text string) (string, error) {
 	return format.FormatMarkdown(text)
 }
 
