@@ -64,7 +64,7 @@ func NewClient(provider LLMProvider, opts LLMClientOptions) (client LLMClient, e
 		}
 		localEndpoint, err := url.Parse(ollameEndpoint)
 		if err != nil {
-			return nil, fmt.Errorf("OLLAMA_ENDPOINT URL is invalid: %v", err)
+			return nil, fmt.Errorf("OLLAMA_ENDPOINT URL is invalid: %w", err)
 		}
 		return newOllamaClient(*localEndpoint, opts.Model), nil
 	default:

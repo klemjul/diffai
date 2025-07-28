@@ -118,7 +118,7 @@ func run(cmd *cobra.Command, args []string, services app.ServiceProvider) error 
 	var diffRes git.DiffResult
 	workingDirectory, err := os.Getwd()
 	if err != nil {
-		return fmt.Errorf("error getting current working directory: %v", err)
+		return fmt.Errorf("error getting current working directory: %w", err)
 	}
 
 	options := git.DiffOptions{
@@ -141,7 +141,7 @@ func run(cmd *cobra.Command, args []string, services app.ServiceProvider) error 
 	}
 
 	if err != nil {
-		return fmt.Errorf("error generating diff: %v", err)
+		return fmt.Errorf("error generating diff: %w", err)
 	}
 
 	diffContent := string(diffRes.Out)
@@ -158,7 +158,7 @@ func run(cmd *cobra.Command, args []string, services app.ServiceProvider) error 
 	})
 
 	if err != nil {
-		return fmt.Errorf("failed to create LLM client: %v", err)
+		return fmt.Errorf("failed to create LLM client: %w", err)
 	}
 
 	initialMessages := []llm.Message{
@@ -177,11 +177,11 @@ func run(cmd *cobra.Command, args []string, services app.ServiceProvider) error 
 	if !interactive {
 		aiRes, err := client.Send(cmd.Context(), initialMessages)
 		if err != nil {
-			return fmt.Errorf("failed to generate response: %v", err)
+			return fmt.Errorf("failed to generate response: %w", err)
 		}
 		formattedRes, err := services.Format().FormatMarkdown(aiRes.Content)
 		if err != nil {
-			return fmt.Errorf("failed to format response: %v", err)
+			return fmt.Errorf("failed to format response: %w", err)
 		}
 		cmd.OutOrStdout().Write([]byte(formattedRes))
 
@@ -192,7 +192,7 @@ func run(cmd *cobra.Command, args []string, services app.ServiceProvider) error 
 			GetBotResponse: makeLLMBotResponder(client, cmd.Context()),
 		})
 		if _, err := services.TUI().Run(TUIModel); err != nil {
-			return fmt.Errorf("error running interactive mode: %v", err)
+			return fmt.Errorf("error running interactive mode: %w", err)
 		}
 	}
 	return nil
