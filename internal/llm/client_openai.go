@@ -8,8 +8,6 @@ import (
 	"github.com/openai/openai-go/packages/ssestream"
 )
 
-type LLMClientOpenAI LLMClient
-
 type llmClientOpenAi struct {
 	client openaiClient
 	model  string
@@ -59,7 +57,7 @@ func (c *defaultOpenAiClient) NewStreaming(ctx context.Context, body openai.Chat
 	return &defaultOpenaiChatStream{stream: c.client.Chat.Completions.NewStreaming(ctx, body, opts...)}
 }
 
-func newOpenAIClient(openAIKey string, model string, opts ...option.RequestOption) LLMClientOpenAI {
+func newOpenAIClient(openAIKey string, model string, opts ...option.RequestOption) LLMClient {
 	return &llmClientOpenAi{
 		client: &defaultOpenAiClient{client: openai.NewClient(
 			append([]option.RequestOption{option.WithAPIKey(openAIKey)}, opts...)...,
@@ -85,8 +83,8 @@ func (ai *llmClientOpenAi) toOpenAiMessages(messages []Message) []openai.ChatCom
 	return openAiMessages
 }
 
-func (ai *llmClientOpenAi) Send(ctx context.Context, messages []Message) (*LLMSendResponse, error) {
-	res, err := ai.client.New(
+func (ai *llmClientOpenAi) Send(ctx context.Context, messages []Message) (res *LLMSendResponse, err error) {
+	openAiRes, err := ai.client.New(
 		ctx,
 		openai.ChatCompletionNewParams{
 			Model:    ai.model,
@@ -96,14 +94,14 @@ func (ai *llmClientOpenAi) Send(ctx context.Context, messages []Message) (*LLMSe
 	)
 
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	return &LLMSendResponse{
-		Content: res.Choices[0].Message.Content,
+		Content: openAiRes.Choices[0].Message.Content,
 		Usage: LLMTokenUsage{
-			InputTokens:  res.Usage.PromptTokens,
-			OutputTokens: res.Usage.CompletionTokens,
+			InputTokens:  openAiRes.Usage.PromptTokens,
+			OutputTokens: openAiRes.Usage.CompletionTokens,
 		},
 	}, nil
 }

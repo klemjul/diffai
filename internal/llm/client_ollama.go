@@ -17,16 +17,15 @@ type llmClientOllama struct {
 	client ollamaClient
 	model  string
 }
-type LLMClientOllama LLMClient
 
-func newOllamaClient(localEndpoint url.URL, model string) LLMClientOllama {
+func newOllamaClient(localEndpoint url.URL, model string) LLMClient {
 	return &llmClientOllama{
 		client: api.NewClient(&localEndpoint, http.DefaultClient),
 		model:  model,
 	}
 }
 
-func (ai *llmClientOllama) Send(ctx context.Context, messages []Message) (*LLMSendResponse, error) {
+func (ai *llmClientOllama) Send(ctx context.Context, messages []Message) (res *LLMSendResponse, err error) {
 	stream := ai.chat(ctx, messages)
 	var fullResult string
 	for event := range stream {
@@ -34,16 +33,14 @@ func (ai *llmClientOllama) Send(ctx context.Context, messages []Message) (*LLMSe
 		case LLMStreamEventTypeMessage:
 			fullResult += event.Content
 		case LLMStreamEventTypeComplete:
-			return &LLMSendResponse{
+			res = &LLMSendResponse{
 				Content: fullResult,
-			}, nil
+			}
 		case LLMStreamEventTypeError:
-			return nil, fmt.Errorf("ollama error: %s", event.Content)
+			err = fmt.Errorf("ollama error: %s", event.Content)
 		}
 	}
-	return &LLMSendResponse{
-		Content: fullResult,
-	}, nil
+	return
 }
 func (ai *llmClientOllama) Stream(ctx context.Context, messages []Message) <-chan LLMStreamEvent {
 	return ai.chat(ctx, messages)

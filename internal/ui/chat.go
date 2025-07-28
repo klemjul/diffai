@@ -69,8 +69,7 @@ func (m ChatTUIModel) Init() tea.Cmd {
 	)
 }
 
-func (m ChatTUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
+func (m ChatTUIModel) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:

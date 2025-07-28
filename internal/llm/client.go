@@ -49,7 +49,7 @@ type LLMClientOptions struct {
 	Model string
 }
 
-func NewClient(provider LLMProvider, opts LLMClientOptions) (LLMClient, error) {
+func NewClient(provider LLMProvider, opts LLMClientOptions) (client LLMClient, err error) {
 	switch provider {
 	case LLMProviderOpenAI:
 		apiKey, exists := os.LookupEnv("OPENAI_API_KEY")
