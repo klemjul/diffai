@@ -118,7 +118,7 @@ func clearEnvWithPrefix(prefix string) {
 
 func executeRootCommand(app app.ServiceProvider, args ...string) (string, error) {
 	viper.Reset()
-	cmd := RootCommand(app)
+	cmd, _ := RootCommand(app)
 	buf := new(bytes.Buffer)
 	cmd.SetOut(buf)
 	cmd.SetErr(buf)

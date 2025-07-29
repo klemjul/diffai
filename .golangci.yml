@@ -1,0 +1,27 @@
+# https://golangci-lint.run/usage/configuration
+version: "2"
+linters:
+  enable:
+    - staticcheck
+    - govet
+    - errcheck
+formatters:
+  enable: 
+    - gofmt
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  fix: false
+output:
+  formats:
+    text:
+      path: stdout
+      print-linter-name: true
+      print-issued-lines: false
+      colors: true
+run:
+  timeout: 30s
+  # The mode used to evaluate relative paths.
+  relative-path-mode: cfg
+  # Include test files or not.
+  tests: false

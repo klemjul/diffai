@@ -150,10 +150,10 @@ func (ai *llmClientOpenAI) Stream(ctx context.Context, messages []Message) <-cha
 
 		out <- LLMStreamEvent{
 			Type:    LLMStreamEventTypeComplete,
-			Content: acc.ChatCompletion.Choices[0].Message.Content,
+			Content: acc.Choices[0].Message.Content,
 			Usage: LLMTokenUsage{
-				InputTokens:  acc.ChatCompletion.Usage.PromptTokens,
-				OutputTokens: acc.ChatCompletion.Usage.CompletionTokens,
+				InputTokens:  acc.Usage.PromptTokens,
+				OutputTokens: acc.Usage.CompletionTokens,
 			},
 		}
 

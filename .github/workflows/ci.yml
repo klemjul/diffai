@@ -28,21 +28,23 @@ jobs:
 
     - name: Check go.mod tidy
       run: |
-        go mod tidy
+        make clean
         git diff --exit-code go.mod go.sum
 
     - name: install
-      run: go mod download
+      run: make install
 
-    - name: fmt
+    - name: golangci-lint
+      uses: golangci/golangci-lint-action@v8
+      with:
+        version: v2.1
+
+    - name: format
       run: |
-        if [ -n "$(go fmt ./...)" ]; then
+        if [ -n "$(make format)" ]; then
           echo "Go files are not properly formatted. Run 'go fmt ./...' and commit."
           exit 1
         fi
 
-    - name: ver
-      run: go vet ./...
-
     - name: test
-      run: go test ./... -cover
+      run: make test

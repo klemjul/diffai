@@ -17,8 +17,8 @@ import (
 	"github.com/spf13/viper"
 )
 
-func RootCommand(services app.ServiceProvider) *cobra.Command {
-	rootCmd := &cobra.Command{
+func RootCommand(services app.ServiceProvider) (rootCmd *cobra.Command, err error) {
+	rootCmd = &cobra.Command{
 		Use:   "diffai <commit1> [commit2]",
 		Short: "Ask questions about git changes using AI in the command line.",
 		Args:  cobra.RangeArgs(0, 2),
@@ -58,15 +58,26 @@ diffai   # Review diff of staged changes
 	rootCmd.Flags().StringSliceP("diff-filters", "f", []string{},
 		"git diff -- <path> filters, used to limit the diff to the named paths or file exts")
 
-	viper.BindPFlag(app.EnvDiffTokenLimit, rootCmd.Flags().Lookup("diff-token-limit"))
-	viper.BindPFlag(app.EnvPrompt, rootCmd.Flags().Lookup("prompt"))
-	viper.BindPFlag(app.EnvProvider, rootCmd.Flags().Lookup("provider"))
-	viper.BindPFlag(app.EnvModel, rootCmd.Flags().Lookup("model"))
+	viperBindings := []struct {
+		env  string
+		flag string
+	}{
+		{app.EnvDiffTokenLimit, "diff-token-limit"},
+		{app.EnvPrompt, "prompt"},
+		{app.EnvProvider, "provider"},
+		{app.EnvModel, "model"},
+	}
+
+	for _, binding := range viperBindings {
+		if err = viper.BindPFlag(binding.env, rootCmd.Flags().Lookup(binding.flag)); err != nil {
+			return
+		}
+	}
 
 	viper.SetEnvPrefix(app.AppKey)
 	viper.AutomaticEnv()
 
-	return rootCmd
+	return
 }
 
 func validate(cmd *cobra.Command, args []string) error {
@@ -183,7 +194,9 @@ func run(cmd *cobra.Command, args []string, services app.ServiceProvider) error 
 		if err != nil {
 			return fmt.Errorf("failed to format response: %w", err)
 		}
-		cmd.OutOrStdout().Write([]byte(formattedRes))
+		if _, err = cmd.OutOrStdout().Write([]byte(formattedRes)); err != nil {
+			return fmt.Errorf("failed to write response: %w", err)
+		}
 
 	} else {
 		TUIModel := services.TUI().InitialModel(ui.InitialModelOptions{
