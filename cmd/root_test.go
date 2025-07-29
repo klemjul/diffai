@@ -11,7 +11,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/klemjul/diffai/internal/app"
-	"github.com/klemjul/diffai/internal/config"
 	"github.com/klemjul/diffai/internal/git"
 	"github.com/klemjul/diffai/internal/llm"
 	"github.com/klemjul/diffai/internal/ui"
@@ -98,12 +97,12 @@ func (a *MockApp) TUI() app.TUIService           { return a.tui }
 func (a *MockApp) LLM() app.LLMService           { return a.llm }
 func (a *MockApp) Format() app.TextFormatService { return a.format }
 
-func NewMockApp() app.App {
+func NewMockApp() app.ServiceProvider {
 	return &MockApp{git: &MockGitService{}, tui: &MockTUIService{}, llm: &MockLLMService{}, format: &MockFormatClient{}}
 }
 
 func TestMain(m *testing.M) {
-	clearEnvWithPrefix(config.ENV_PREFIX)
+	clearEnvWithPrefix(app.AppKey)
 	m.Run()
 }
 
@@ -117,9 +116,9 @@ func clearEnvWithPrefix(prefix string) {
 	}
 }
 
-func executeRootCommand(app app.App, args ...string) (string, error) {
+func executeRootCommand(app app.ServiceProvider, args ...string) (string, error) {
 	viper.Reset()
-	cmd := RootCommand(app)
+	cmd, _ := RootCommand(app)
 	buf := new(bytes.Buffer)
 	cmd.SetOut(buf)
 	cmd.SetErr(buf)

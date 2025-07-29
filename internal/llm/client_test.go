@@ -21,8 +21,8 @@ func TestNewClient_OpenAI_WithAPIKey(t *testing.T) {
 
 	client, err := NewClient(LLMProviderOpenAI, LLMClientOptions{Model: "gpt-4-o"})
 	require.NoError(t, err)
-	assert.IsType(t, &llmClientOpenAi{}, client)
-	assert.Equal(t, client.(*llmClientOpenAi).model, "gpt-4-o")
+	assert.IsType(t, &llmClientOpenAI{}, client)
+	assert.Equal(t, client.(*llmClientOpenAI).model, "gpt-4-o")
 }
 
 func TestNewClient_Ollama_MissingEndpoint(t *testing.T) {

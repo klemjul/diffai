@@ -22,7 +22,7 @@ func (exc execCommand) GetArgs() []string {
 	return exc.Args
 }
 
-func newExecCommander(name string, arg ...string) command {
-	execCmd := exec.Command(name, arg...)
+func newExecCommander(name string, args ...string) command {
+	execCmd := exec.Command(name, args...)
 	return execCommand{Cmd: execCmd}
 }

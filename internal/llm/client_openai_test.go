@@ -58,10 +58,10 @@ func (m *openaiMockStream) Err() error {
 	return args.Error(0)
 }
 
-func newOpenaiMockClient(model string) *llmClientOpenAi {
+func newOpenaiMockClient(model string) *llmClientOpenAI {
 	mockClient := new(openaiMockClient)
 
-	return &llmClientOpenAi{
+	return &llmClientOpenAI{
 		client: mockClient,
 		model:  model,
 	}

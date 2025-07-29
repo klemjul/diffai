@@ -49,7 +49,7 @@ type LLMClientOptions struct {
 	Model string
 }
 
-func NewClient(provider LLMProvider, opts LLMClientOptions) (LLMClient, error) {
+func NewClient(provider LLMProvider, opts LLMClientOptions) (client LLMClient, err error) {
 	switch provider {
 	case LLMProviderOpenAI:
 		apiKey, exists := os.LookupEnv("OPENAI_API_KEY")
@@ -64,7 +64,7 @@ func NewClient(provider LLMProvider, opts LLMClientOptions) (LLMClient, error) {
 		}
 		localEndpoint, err := url.Parse(ollameEndpoint)
 		if err != nil {
-			return nil, fmt.Errorf("OLLAMA_ENDPOINT URL is invalid: %v", err)
+			return nil, fmt.Errorf("OLLAMA_ENDPOINT URL is invalid: %w", err)
 		}
 		return newOllamaClient(*localEndpoint, opts.Model), nil
 	default:
