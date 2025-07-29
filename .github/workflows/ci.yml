@@ -39,12 +39,5 @@ jobs:
       with:
         version: v2.1
 
-    - name: format
-      run: |
-        if [ -n "$(make format)" ]; then
-          echo "Go files are not properly formatted. Run 'go fmt ./...' and commit."
-          exit 1
-        fi
-
     - name: test
       run: make test

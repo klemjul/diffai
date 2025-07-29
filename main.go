@@ -19,5 +19,5 @@ func main() {
 	services := app.NewDefaultServiceProvider()
 	rootCmt, err := cmd.RootCommand(services)
 	fatalOnError(err)
-	rootCmt.Execute()
+	fatalOnError(rootCmt.Execute())
 }
