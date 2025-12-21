@@ -57,7 +57,7 @@ make format
 2. **Submit your PR:**
    - Push your branch to your fork
    - Create a pull request against the `main` branch
-   - Fill out follow the [pull request template](.github/PULL_REQUEST_TEMPLATE/pull_request_template.md)
+   - Fill out the [pull request template](.github/PULL_REQUEST_TEMPLATE/pull_request_template.md)
 
 3. **After submission:**
    - CI checks must pass
