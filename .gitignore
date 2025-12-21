@@ -2,3 +2,4 @@ diffai
 ./data
 # Added by goreleaser init:
 dist/
+coverage.txt
