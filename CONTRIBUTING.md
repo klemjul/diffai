@@ -61,7 +61,7 @@ make format
 
 3. **After submission:**
    - CI checks must pass
-   - Try to Address review feedback promptly
+   - Address review feedback promptly
    - Keep your PR up to date with the main branch
 
 4. **Merge:**
