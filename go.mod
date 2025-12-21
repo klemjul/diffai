@@ -1,6 +1,6 @@
 module github.com/klemjul/diffai
 
-go 1.24.4
+go 1.25.4
 
 require (
 	github.com/charmbracelet/bubbles v0.21.0
