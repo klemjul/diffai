@@ -10,6 +10,6 @@ Provide a more detailed description of the changes, including the approach taken
 
 ## Checklist
 
-- [ ] I have run the linter using `make test`.
-- [ ] I have run the unit tests using `make lint`.
+- [ ] I have run the tests using `make test`.
+- [ ] I have run the linter using `make lint`.
 - [ ] I have made my commits and PR title follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification.
