@@ -36,6 +36,7 @@ jobs:
       uses: golangci/golangci-lint-action@v8
       with:
         version: ${{ steps.golangci-lint-version.outputs.version }}
+        args: --timeout=1m
 
     - name: test
       run: make test
