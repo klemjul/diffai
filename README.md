@@ -128,10 +128,9 @@ DiffAI is licensed under the MIT License. See the [LICENSE](./LICENSE) file for 
 
 ## Contributing
 
-> **TODO**
+See [CONTRIBUTING.md](CONTRIBUTING.md) for documentation on how to contribute code.
 
-## Next Steps
+### Report Problems
 
-- [ ] Contributing doc
-- [ ] Additional LLM provider support
-- [ ] Custom output formats
+If you have what looks like a bug, please use the GitHub issue tracking system. Before you file an issue, please search existing issues to see if your issue is already covered.
+
