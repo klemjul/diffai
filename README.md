@@ -1,4 +1,6 @@
 # DiffAI
+[![Go Report Card](https://goreportcard.com/badge/github.com/klemjul/diffai)](https://goreportcard.com/report/github.com/klemjul/diffai)
+[![Latest Release](https://img.shields.io/github/v/release/klemjul/diffai)](https://github.com/klemjul/diffai/releases/latest)
 
 A lightweight command-line tool that provides a simple way to ask questions about commits, staged changes, or diffs through seamless integration between Git and AI.
 
