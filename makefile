@@ -7,7 +7,7 @@ format:
 	go fmt ./...
 
 test:
-	go test ./... -cover
+	go test ./... -coverprofile=coverage.txt
 
 install:
 	go mod download
