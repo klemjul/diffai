@@ -30,7 +30,7 @@ jobs:
       uses: actions/checkout@v6
 
     - name: Install Go
-      uses: actions/setup-go@6
+      uses: actions/setup-go@v6
       with:
         go-version-file: go.mod
 
@@ -40,7 +40,7 @@ jobs:
         languages: ${{ matrix.language }}
 
     - name: Autobuild
-      uses: github/codeql-action/autobuild@4
+      uses: github/codeql-action/autobuild@v4
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4
