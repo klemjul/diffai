@@ -11,20 +11,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
-    - name: Extract Go version from go.mod
-      id: go-version
-      run: |
-        # Extract version after 'go ' from go.mod
-        version=$(grep '^go ' go.mod | awk '{print $2}')
-        echo "Go version from go.mod is $version"
-        echo "go_version=$version" >> $GITHUB_OUTPUT
-
-    - name: Set up Go
-      uses: actions/setup-go@v5
+    - name: Setup Go
+      uses: actions/setup-go@v6
       with:
-        go-version: ${{ steps.go-version.outputs.go_version }}
+        go-version-file: "go.mod"
+
+    - name: Extract golangci-lint version from .tool-versions
+      id: golangci-lint-version
+      run: |
+        VERSION=$(grep golangci-lint .tool-versions | awk '{print $2}')
+        echo "version=v$VERSION" >> $GITHUB_OUTPUT
 
     - name: Check go.mod tidy
       run: |
@@ -37,7 +35,7 @@ jobs:
     - name: golangci-lint
       uses: golangci/golangci-lint-action@v8
       with:
-        version: v2.1
+        version: ${{ steps.golangci-lint-version.outputs.version }}
 
     - name: test
       run: make test
