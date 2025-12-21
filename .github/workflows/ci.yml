@@ -6,8 +6,11 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
-  build:
+  ci-check:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -18,12 +21,6 @@ jobs:
       with:
         go-version-file: "go.mod"
 
-    - name: Extract golangci-lint version from .tool-versions
-      id: golangci-lint-version
-      run: |
-        VERSION=$(grep golangci-lint .tool-versions | awk '{print $2}')
-        echo "version=v$VERSION" >> $GITHUB_OUTPUT
-
     - name: Check go.mod tidy
       run: |
         make clean
@@ -31,6 +28,12 @@ jobs:
 
     - name: install
       run: make install
+
+    - name: Extract golangci-lint version from .tool-versions
+      id: golangci-lint-version
+      run: |
+        VERSION=$(grep golangci-lint .tool-versions | awk '{print $2}')
+        echo "version=v$VERSION" >> $GITHUB_OUTPUT
 
     - name: golangci-lint
       uses: golangci/golangci-lint-action@v8
