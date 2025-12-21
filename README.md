@@ -128,10 +128,10 @@ DiffAI is licensed under the MIT License. See the [LICENSE](./LICENSE) file for 
 
 ## Contributing
 
-> **TODO**
+Contributions are welcome! Please see our [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines on how to contribute to this project.
 
 ## Next Steps
 
-- [ ] Contributing doc
+- [x] Contributing doc
 - [ ] Additional LLM provider support
 - [ ] Custom output formats
